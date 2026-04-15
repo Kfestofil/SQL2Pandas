@@ -10,6 +10,6 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 ### Planowany wynik działania programu
 - konwerter zapytań SQL do operacji na danych w bibliotece pandas
 ### Planowany język implementacji
-- python
+- Python
 ### Generator parsera
-- TBD
+- Lark
