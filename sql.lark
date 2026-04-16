@@ -1,0 +1,109 @@
+start: select_stmt
+
+// glowna struktura select
+select_stmt: "SELECT"i ["DISTINCT"i] select_list "FROM"i table_ref join_clause* where_clause? groupby_clause? having_clause? orderby_clause? limit_clause?
+
+// select_list to albo "*", albo lista wyrazen z opcjonalnymi aliasami.
+select_list: "*"	-> star
+           | select_item ("," select_item)*
+
+select_item: expr "AS"i NAME // z aliasem
+           | expr // bez aliasu
+
+table_ref: NAME ["AS"i NAME]
+
+// joiny
+
+join_clause: join_type "JOIN"i table_ref "ON"i condition
+
+join_type: "INNER"i	-> inner_join
+         | "LEFT"i	-> left_join
+         | "RIGHT"i	-> right_join
+         | "FULL"i -> full_join
+         | -> inner_join // domyslnie inner join
+
+where_clause: "WHERE"i condition
+
+// grupowanie
+// pierwsza kolumna wymagana, potem 0 lub wiecej
+groupby_clause: "GROUP"i "BY"i expr ("," expr)*
+
+// filtrowanie po agregacji
+having_clause: "HAVING"i condition
+
+orderby_clause: "ORDER"i "BY"i order_item ("," order_item)*
+
+order_item: expr "DESC"i	-> desc
+          | expr ["ASC"i]	-> asc
+
+limit_clause: "LIMIT"i INTEGER
+
+// wyrazenia arytmetyczne
+?expr: add_expr
+
+?add_expr: add_expr "+" mul_expr	-> add
+         | add_expr "-" mul_expr	-> sub
+         | mul_expr
+
+?mul_expr: mul_expr "*" unary_expr	-> mul
+         | mul_expr "/" unary_expr	-> div
+         | unary_expr
+
+?unary_expr: "-" primary_expr	-> neg
+           | primary_expr
+
+?primary_expr: "(" expr ")"
+             | qualified_col
+             | NUMBER	-> number
+             | STRING	-> string
+             | NAME	-> col
+
+// Kolumna kwalifikowana: tabela.kolumna, np. orders.id
+qualified_col: NAME "." NAME
+
+// priorytety: OR < AND < NOT < porownanie
+?condition: or_expr
+
+?or_expr: or_expr "OR"i and_expr	-> or_cond
+        | and_expr
+
+?and_expr: and_expr "AND"i not_expr	-> and_cond
+         | not_expr
+
+?not_expr: "NOT"i not_expr	-> not_cond
+         | compare_expr
+
+?compare_expr: expr comp_op expr	-> compare
+             | expr "IS"i "NOT"i "NULL"i	-> is_not_null
+             | expr "IS"i "NULL"i	-> is_null
+             | expr "NOT"i "LIKE"i STRING	-> not_like
+             | expr "LIKE"i STRING	-> like_cond
+             | expr "NOT"i "IN"i "(" value_list ")"	-> not_in
+             | expr "IN"i "(" value_list ")"	-> in_cond
+             | expr "NOT"i "BETWEEN"i expr "AND"i expr	-> not_between
+             | expr "BETWEEN"i expr "AND"i expr	-> between_cond
+             | "(" condition ")"
+
+// operatory porownania
+comp_op: "="	-> eq
+       | "!=" | "<>"	-> neq
+       | "<"	-> lt
+       | ">"	-> gt
+       | "<="	-> lte
+       | ">="	-> gte
+
+// dla in (...)
+value_list: literal ("," literal)*
+?literal: NUMBER	-> number
+        | STRING	-> string
+
+// symbole terminalne
+NAME: /[a-zA-Z_]\w*/	// pierwszy znak litera lub _
+INTEGER: /\d+/	// jedna lub wiecej cyfr
+NUMBER: /\d+(\.\d*)?/	// jedna lub wiecej cyfr w czesci calkowitej, opcjonalna czesc po przecinku
+STRING: /\'[^\']*\'|\"[^\"]*\"/	// podwojne lub pojedyncze cudzyslowia
+
+// ignorowane znaki
+%ignore /\s+/	// biale znaki
+%ignore /--[^\n]*/	// komentarze
+%ignore /\/\*.*?\*\//s	// komentarze /* komentarz */
