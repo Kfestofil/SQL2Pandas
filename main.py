@@ -19,6 +19,18 @@ QUERIES = [
     "SELECT name FROM users ORDER BY age DESC LIMIT 10",
     "SELECT u.name, o.total FROM users AS u JOIN orders AS o ON u.id = o.user_id",
     "SELECT u.name, o.total FROM users AS u LEFT JOIN orders AS o ON u.id = o.user_id WHERE o.total > 500 ORDER BY o.total DESC LIMIT 5",
+
+    # INSERT
+    "INSERT INTO users (id, name, email) VALUES (1, 'Jan', 'jan@example.com')",
+    "INSERT INTO products VALUES (10, 'Laptop', 2500)",
+
+    # UPDATE
+    "UPDATE users SET name = 'Jan Kowalski', age = 30 WHERE id = 1",
+    "UPDATE products SET price = price * 1.1",
+
+    # DELETE
+    "DELETE FROM users WHERE age < 18",
+    "DELETE FROM orders",
 ]
 
 from lark import Lark

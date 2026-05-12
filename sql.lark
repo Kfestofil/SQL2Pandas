@@ -1,4 +1,21 @@
-start: select_stmt
+start: stmt
+
+?stmt: select_stmt
+     | insert_stmt
+     | update_stmt
+     | delete_stmt
+
+// --- INSERT ---
+insert_stmt: "INSERT"i "INTO"i table_ref ["(" column_list ")"] "VALUES"i "(" value_list ")" ("," "(" value_list ")")*
+column_list: NAME ("," NAME)*
+
+// --- UPDATE ---
+update_stmt: "UPDATE"i table_ref "SET"i assign_list where_clause?
+assign_list: assign_item ("," assign_item)*
+assign_item: NAME "=" expr
+
+// --- DELETE ---
+delete_stmt: "DELETE"i "FROM"i table_ref where_clause?
 
 // glowna struktura select
 select_stmt: "SELECT"i ["DISTINCT"i] select_list "FROM"i table_ref join_clause* where_clause? groupby_clause? having_clause? orderby_clause? limit_clause?

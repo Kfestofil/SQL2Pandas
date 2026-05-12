@@ -20,6 +20,13 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 
 | Symbol | Opis |
 |---|---|
+| `stmt` | ogólne zapytanie SQL (SELECT, INSERT, UPDATE, DELETE) |
+| `insert_stmt` | polecenie INSERT INTO |
+| `column_list` | opcjonalna lista kolumn do wstawienia danych w INSERT |
+| `update_stmt` | polecenie UPDATE |
+| `assign_list` | lista przypisań wartości po SET |
+| `assign_item` | pojedyncze przypisanie modyfikujące wartość np. `tabela = wartość` |
+| `delete_stmt` | polecenie DELETE FROM |
 | `select_stmt` | całe zapytanie SELECT |
 | `select_list` | lista wyrażeń po SELECT |
 | `select_item` | pojedyncze wyrażenie z opcjonalnym aliasem AS |
@@ -41,7 +48,7 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 ### Symbole terminalne
 
 #### Słowa kluczowe (case-insensitive)
-`SELECT`, `DISTINCT`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`
+`SELECT`, `INSERT`, `INTO`, `VALUES`, `UPDATE`, `SET`, `DELETE`, `DISTINCT`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`
 
 #### Operatory i separatory
 
