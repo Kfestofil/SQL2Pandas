@@ -63,9 +63,9 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 
 #### Literały i identyfikatory
 
-| Token | Przykład |
-|---|---|
-| `NAME` | `users`, `price` |
-| `INTEGER` | `42` |
-| `NUMBER` | `3.14`, `1.` |
-| `STRING` | `'Jan'`, `"ABC"` |
+| Token | Przykład | Wyrażenie Regularne (Regex) | Opis |
+| :--- | :--- | :--- | :--- |
+| `NAME` | `users`, `price` | `/[a-zA-Z_][a-zA-Z0-9_]*/` | Nazwy tabel i kolumn (litera/podkreślnik + alfanumeryczne) |
+| `INTEGER` | `42` | `/[0-9]+/` | Liczby całkowite |
+| `NUMBER` | `3.14`, `1.` | `/[0-9]+\.[0-9]*/` | Liczby zmiennoprzecinkowe |
+| `STRING` | `'Jan'`, `"ABC"` | `/('[^']*')|("[^"]*")/` | Literały tekstowe w apostrofach lub cudzysłowach |
