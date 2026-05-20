@@ -27,6 +27,7 @@ from pathlib import Path
 
 from lark import Lark
 
+from ast_to_pandas import ASTToPandas
 from tree_to_ast import TreeToAST
 
 GRAMMAR = Path(__file__).parent / "sql.lark"
@@ -39,13 +40,37 @@ def make_parser() -> Lark:
 def main():
     parser = make_parser()
     transformer = TreeToAST()
+    generator = ASTToPandas()
     for q in QUERIES:
         print(q)
         tree = parser.parse(q)
         ast = transformer.transform(tree)
-        print(ast)
+        print(generator.gen(ast))
+        print()
+
+
+def repl():
+    parser = make_parser()
+    transformer = TreeToAST()
+    generator = ASTToPandas()
+    while True:
+        try:
+            sql = input("podaj sql (wyjscie q): ").strip()
+        except EOFError:
+            break
+        if sql == "q":
+            break
+        if not sql:
+            continue
+        try:
+            tree = parser.parse(sql)
+            ast = transformer.transform(tree)
+            print(generator.gen(ast))
+        except Exception as e:
+            print(f"blad: {e}")
         print()
 
 
 if __name__ == "__main__":
     main()
+    repl()
