@@ -34,8 +34,9 @@ QUERIES = [
 ]
 
 from lark import Lark
-
 from pathlib import Path
+from tree_to_ast import TreeToAST
+
 GRAMMAR = Path(__file__).parent / "sql.lark"
 
 def make_parser() -> Lark:
@@ -43,10 +44,13 @@ def make_parser() -> Lark:
 
 def main():
     parser = make_parser()
+    transformer = TreeToAST()
     for q in QUERIES:
         print(q)
         tree = parser.parse(q)
-        print(tree.pretty())
+        ast = transformer.transform(tree)
+        print(ast)
+        print()
 
 if __name__ == "__main__":
     main()
