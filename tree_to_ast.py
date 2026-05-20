@@ -2,9 +2,9 @@ from lark import Token, Transformer
 
 import ast_nodes as nodes
 
-
 # bierze drzewo Larka
 # i zamienia je na obiekty z ast_nodes.py
+
 
 # jedna funkcja = jedna regula
 class TreeToAST(Transformer):
@@ -237,7 +237,7 @@ class TreeToAST(Transformer):
     # having_clause: "HAVING"i condition
     def having_clause(self, items):
         condition = items[0]
-        return condition
+        return nodes.Having(cond=condition)
 
     # orderby_clause: "ORDER"i "BY"i order_item ("," order_item)*
     def orderby_clause(self, items):
@@ -262,6 +262,7 @@ class TreeToAST(Transformer):
 
     # select_stmt: "SELECT"i distinct? select_list "FROM"i table_ref join_clause* where_clause? groupby_clause? having_clause? orderby_clause? limit_clause?
     def select_stmt(self, items):
+        print("ITEMS", items)
         distinct = False
         columns = None
         table = None
@@ -300,13 +301,13 @@ class TreeToAST(Transformer):
                 table = item
             elif isinstance(item, nodes.JoinClause):
                 joins.append(item)
-            elif isinstance(item, condition_types) and where is None:
-                # pierwsze condition to WHERE
-                where = item
-            elif isinstance(item, condition_types):
-                # drugie condition to HAVING, bo where jest juz ustawione
+            elif isinstance(item, nodes.Having):
                 having = item
-            elif isinstance(item, list) and all(isinstance(o, nodes.OrderItem) for o in item):
+            elif isinstance(item, condition_types) and where is None:
+                where = item
+            elif isinstance(item, list) and all(
+                isinstance(o, nodes.OrderItem) for o in item
+            ):
                 # orderby sprawdzamy przed groupby bo oba sa lista, OrderItem je rozroznia
                 orderby = item
             elif isinstance(item, list) and len(item) > 0:

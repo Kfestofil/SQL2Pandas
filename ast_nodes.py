@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-
 # wyrazenia
 
 
@@ -157,7 +156,14 @@ Condition = (
 )
 
 
+# klauzula having (wrapper zeby odroznic od where podczas parsowania)
+@dataclass
+class Having:
+    cond: Condition
+
+
 # elementy z select
+
 
 # jedna kolumna z select
 @dataclass
@@ -197,7 +203,7 @@ class SelectStmt:
     joins: list[JoinClause] = field(default_factory=list)
     where: Optional[Condition] = None
     groupby: list[Expr] = field(default_factory=list)
-    having: Optional[Condition] = None
+    having: Optional[Having] = None
     orderby: list[OrderItem] = field(default_factory=list)
     limit: Optional[int] = None
 
