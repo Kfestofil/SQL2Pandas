@@ -28,6 +28,7 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 | `assign_item` | pojedyncze przypisanie modyfikujące wartość np. `tabela = wartość` |
 | `delete_stmt` | polecenie DELETE FROM |
 | `select_stmt` | całe zapytanie SELECT |
+| `distinct` | opcjonalne DISTINCT po SELECT |
 | `select_list` | lista wyrażeń po SELECT |
 | `select_item` | pojedyncze wyrażenie z opcjonalnym aliasem AS |
 | `table_ref` | nazwa tabeli po FROM z opcjonalnym aliasem |
@@ -44,11 +45,13 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 | `condition` | wyrażenie logiczne |
 | `comp_op` | operator porównania (=, !=, <, >, <=, >=) |
 | `value_list` | lista w IN (…) |
+| `agg_star` | agregacja z argumentem `*`, np. `COUNT(*)` |
+| `agg_expr` | agregacja z wyrażeniem, np. `AVG(price)` |
 
 ### Symbole terminalne
 
 #### Słowa kluczowe (case-insensitive)
-`SELECT`, `INSERT`, `INTO`, `VALUES`, `UPDATE`, `SET`, `DELETE`, `DISTINCT`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`
+`SELECT`, `DISTINCT`, `INSERT`, `INTO`, `VALUES`, `UPDATE`, `SET`, `DELETE`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`, `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`
 
 #### Operatory i separatory
 

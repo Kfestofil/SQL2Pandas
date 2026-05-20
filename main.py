@@ -13,9 +13,9 @@ QUERIES = [
 
     "SELECT name, price * 1.23 AS price_vat FROM products",
 
-    # "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category",
+    "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category",
 
-    # "SELECT category, AVG(price) FROM products GROUP BY category HAVING AVG(price) > 100",
+    "SELECT category, AVG(price) FROM products GROUP BY category HAVING AVG(price) > 100",
     "SELECT name FROM users ORDER BY age DESC LIMIT 10",
     "SELECT u.name, o.total FROM users AS u JOIN orders AS o ON u.id = o.user_id",
     "SELECT u.name, o.total FROM users AS u LEFT JOIN orders AS o ON u.id = o.user_id WHERE o.total > 500 ORDER BY o.total DESC LIMIT 5",

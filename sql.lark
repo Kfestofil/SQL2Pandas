@@ -5,20 +5,21 @@ start: stmt
      | update_stmt
      | delete_stmt
 
-// --- INSERT ---
+// INSERT
 insert_stmt: "INSERT"i "INTO"i table_ref ["(" column_list ")"] "VALUES"i "(" value_list ")" ("," "(" value_list ")")*
 column_list: NAME ("," NAME)*
 
-// --- UPDATE ---
+// UPDATE
 update_stmt: "UPDATE"i table_ref "SET"i assign_list where_clause?
 assign_list: assign_item ("," assign_item)*
 assign_item: NAME "=" expr
 
-// --- DELETE ---
+// DELETE
 delete_stmt: "DELETE"i "FROM"i table_ref where_clause?
 
 // glowna struktura select
-select_stmt: "SELECT"i ["DISTINCT"i] select_list "FROM"i table_ref join_clause* where_clause? groupby_clause? having_clause? orderby_clause? limit_clause?
+select_stmt: "SELECT"i distinct? select_list "FROM"i table_ref join_clause* where_clause? groupby_clause? having_clause? orderby_clause? limit_clause?
+distinct: "DISTINCT"i
 
 // select_list to albo "*", albo lista wyrazen z opcjonalnymi aliasami.
 select_list: "*"	-> star
@@ -70,10 +71,14 @@ limit_clause: "LIMIT"i INTEGER
            | primary_expr
 
 ?primary_expr: "(" expr ")"
+             | AGG_FUNC "(" "*" ")"	-> agg_star
+             | AGG_FUNC "(" expr ")"	-> agg_expr
              | qualified_col
              | NUMBER	-> number
              | STRING	-> string
              | NAME	-> col
+
+AGG_FUNC: /COUNT|SUM|AVG|MIN|MAX/i
 
 // Kolumna kwalifikowana: tabela.kolumna, np. orders.id
 qualified_col: NAME "." NAME
