@@ -19,8 +19,6 @@ class ASTToPandas:
         raise ValueError(f"nieznany typ: {type(stmt)}")
 
     # wyrazenia
-
-    # zamienia wyrazenie SQL na wyrazenie Pandas odpowiednia funkcja
     def gen_expr(self, expr, df) -> str:
         # col -> df["col"]
         if isinstance(expr, nodes.ColExpr):
@@ -28,65 +26,64 @@ class ASTToPandas:
         # tabela.kolumna -> df["kolumna"]
         elif isinstance(expr, nodes.QualifiedCol):
             return self._expr_qualified_col(expr, df)
-        # liczba -> liczba
+        #  literal liczba 
         elif isinstance(expr, nodes.NumberLiteral):
             return self._expr_number(expr, df)
-        # 'napis' -> "napis"
+        # 'napis' na "napis"
         elif isinstance(expr, nodes.StringLiteral):
             return self._expr_string(expr, df)
-        # a + b -> gen_expr(a) + gen_expr(b)
+        # a + b na gen_expr(a) + gen_expr(b)
         elif isinstance(expr, nodes.BinOp):
             return self._expr_binop(expr, df)
         # -a -> -(gen_expr(a))
         elif isinstance(expr, nodes.Neg):
             return self._expr_neg(expr, df)
-        # COUNT(*) -> "count" (do .agg())
+        # COUNT(*) na "count" (do .agg())
         elif isinstance(expr, nodes.AggStar):
             return self._expr_agg_star(expr, df)
-        # AVG(col) -> ("col", "mean") (do .agg())
+        # AVG(col) na ("col", "mean") (do .agg())
         elif isinstance(expr, nodes.AggExpr):
             return self._expr_agg_expr(expr, df)
         raise ValueError(f"nieznany expr: {type(expr)}")
 
-    # col -> df["col"]
+    # col na df["col"]
     def _expr_col(self, expr, df) -> str:
         return f'{df}["{expr.name}"]'
 
-    # tabela.kolumna -> df["kolumna"]
+    # tabela.kolumna na df["kolumna"]
     def _expr_qualified_col(self, expr, df) -> str:
         return f'{df}["{expr.column}"]'
 
-    # liczba -> wartosc jako string
+    # liczba na wartosc jako string
     def _expr_number(self, expr, df) -> str:
         return expr.value
 
-    # string SQL -> "wartosc" bez cudzyslowow
+    # string SQL na "wartosc" bez cudzyslowow
     def _expr_string(self, expr, df) -> str:
         return f'"{self._strip_quotes(expr.value)}"'
 
-    # a + b, a * b itd. -> gen_expr(a) op gen_expr(b)
+    # a + b, a * b itd. na gen_expr(a) op gen_expr(b)
     def _expr_binop(self, expr, df) -> str:
         left = self.gen_expr(expr.left, df)
         right = self.gen_expr(expr.right, df)
         return f"{left} {expr.op} {right}"
 
-    # -a -> -(gen_expr(a))
+    # -a na -(gen_expr(a))
     def _expr_neg(self, expr, df) -> str:
         return f"-({self.gen_expr(expr.expr, df)})"
 
-    # COUNT(*) -> "count" — uzywane w .agg()
+    # COUNT(*) na "count" - uzywane w .agg()
     def _expr_agg_star(self, expr, df) -> str:
         return f'"{expr.func.lower()}"'
 
-    # AVG(col) -> ("col", "mean") — uzywane w .agg()
+    # AVG(col) na ("col", "mean") - uzywane w .agg()
     def _expr_agg_expr(self, expr, df) -> str:
         col = self._col_name(expr.expr)
         func = self._agg_func(expr.func)
         return f'("{col}", "{func}")'
 
     # warunki
-
-    # zamienia warunek SQL na maske booleowska Pandas
+    # zamienia warunek SQL na maske booleowska
     def gen_condition(self, cond, df) -> str:
         if isinstance(cond, nodes.Compare):
             return self._cond_compare(cond, df)
@@ -114,59 +111,59 @@ class ASTToPandas:
             return self._cond_not(cond, df)
         raise ValueError(f"nieznany condition: {type(cond)}")
 
-    # age > 18 -> (df["age"] > 18)
+    # age > 18 na (df["age"] > 18)
     def _cond_compare(self, cond, df) -> str:
         left = self.gen_expr(cond.left, df)
         right = self.gen_expr(cond.right, df)
         return f"({left} {cond.op} {right})"
 
-    # email IS NULL -> (df["email"].isna())
+    # email IS NULL na (df["email"].isna())
     def _cond_is_null(self, cond, df) -> str:
         return f"({self.gen_expr(cond.expr, df)}.isna())"
 
-    # email IS NOT NULL -> (df["email"].notna())
+    # email IS NOT NULL na (df["email"].notna())
     def _cond_is_not_null(self, cond, df) -> str:
         return f"({self.gen_expr(cond.expr, df)}.notna())"
 
-    # name LIKE 'Jan%' -> (df["name"].str.contains(r"^Jan.*$"))
+    # name LIKE 'Jan%' na (df["name"].str.contains(r"^Jan.*$"))
     def _cond_like(self, cond, df) -> str:
         return f'({self.gen_expr(cond.expr, df)}.str.contains(r"{self._like_to_regex(cond.pattern)}"))'
 
-    # name NOT LIKE 'Jan%' -> (~df["name"].str.contains(r"^Jan.*$"))
+    # name NOT LIKE 'Jan%' na (~df["name"].str.contains(r"^Jan.*$"))
     def _cond_not_like(self, cond, df) -> str:
         return f'(~{self.gen_expr(cond.expr, df)}.str.contains(r"{self._like_to_regex(cond.pattern)}"))'
 
-    # city IN ('a', 'b') -> (df["city"].isin(["a", "b"]))
+    # city IN ('a', 'b') na (df["city"].isin(["a", "b"]))
     def _cond_in(self, cond, df) -> str:
         values = [self._gen_literal(v) for v in cond.values]
         return f'({self.gen_expr(cond.expr, df)}.isin([{", ".join(values)}]))'
 
-    # city NOT IN ('a', 'b') -> (~df["city"].isin(["a", "b"]))
+    # city NOT IN ('a', 'b') na (~df["city"].isin(["a", "b"]))
     def _cond_not_in(self, cond, df) -> str:
         values = [self._gen_literal(v) for v in cond.values]
         return f'(~{self.gen_expr(cond.expr, df)}.isin([{", ".join(values)}]))'
 
-    # age BETWEEN 18 AND 65 -> (df["age"].between(18, 65))
+    # age BETWEEN 18 AND 65 na (df["age"].between(18, 65))
     def _cond_between(self, cond, df) -> str:
         low = self.gen_expr(cond.low, df)
         high = self.gen_expr(cond.high, df)
         return f"({self.gen_expr(cond.expr, df)}.between({low}, {high}))"
 
-    # age NOT BETWEEN 18 AND 65 -> (~df["age"].between(18, 65))
+    # age NOT BETWEEN 18 AND 65 na (~df["age"].between(18, 65))
     def _cond_not_between(self, cond, df) -> str:
         low = self.gen_expr(cond.low, df)
         high = self.gen_expr(cond.high, df)
         return f"(~{self.gen_expr(cond.expr, df)}.between({low}, {high}))"
 
-    # a AND b -> (a & b)
+    # a AND b na (a & b)
     def _cond_and(self, cond, df) -> str:
         return f"({self.gen_condition(cond.left, df)} & {self.gen_condition(cond.right, df)})"
 
-    # a OR b -> (a | b)
+    # a OR b na (a | b)
     def _cond_or(self, cond, df) -> str:
         return f"({self.gen_condition(cond.left, df)} | {self.gen_condition(cond.right, df)})"
 
-    # NOT a -> (~a)
+    # NOT a na (~a)
     def _cond_not(self, cond, df) -> str:
         return f"(~{self.gen_condition(cond.cond, df)})"
 
@@ -176,7 +173,7 @@ class ASTToPandas:
     def _gen_select(self, stmt) -> str:
         df = stmt.table.alias or stmt.table.name
 
-        # JOIN -> pd.merge, wynik staje sie nowym df
+        # JOIN na pd.merge, wynik staje sie nowym df
         if stmt.joins:
             lines = []
             current = stmt.table.name
@@ -194,7 +191,7 @@ class ASTToPandas:
 
         return self._gen_select_body(stmt, df)
 
-    # rozpoznaje czy SELECT ma agregacje i wybiera sciezke generowania
+    # rozpoznaje czy SELECT ma agregacje
     def _gen_select_body(self, stmt, df) -> str:
         has_agg = stmt.columns and any(
             isinstance(item.expr, (nodes.AggStar, nodes.AggExpr))
@@ -209,7 +206,7 @@ class ASTToPandas:
     def _gen_simple(self, stmt, df) -> str:
         base = df
 
-        # WHERE -> filtrowanie wierszy
+        # WHERE  filtrowanie wierszy
         if stmt.where:
             base = f"{df}[{self.gen_condition(stmt.where, df)}]"
 
@@ -239,23 +236,23 @@ class ASTToPandas:
                 cols_str = ", ".join(f'"{c}"' for c in col_names)
                 base = f"{base}[[{cols_str}]]"
 
-        # DISTINCT -> .drop_duplicates()
+        # DISTINCT na .drop_duplicates()
         if stmt.distinct:
             base = f"{base}.drop_duplicates()"
 
-        # ORDER BY -> .sort_values()
+        # ORDER BY na .sort_values()
         if stmt.orderby:
             base = self._apply_orderby(base, stmt.orderby)
 
-        # LIMIT -> .head(n)
+        # LIMIT na .head(n)
         if stmt.limit is not None:
             base = f"{base}.head({stmt.limit})"
 
         return base
 
-    # SELECT z GROUP BY lub funkcjami agregujacymi -> .groupby().agg()
+    # SELECT z GROUP BY lub funkcjami agregujacymi na .groupby().agg()
     # np. SELECT category, COUNT(*) FROM products GROUP BY category
-    #  -> products.groupby("category").agg(count=("category", "count")).reset_index()
+    #  na products.groupby("category").agg(count=("category", "count")).reset_index()
     def _gen_groupby(self, stmt, df) -> str:
         base = df
 
@@ -287,7 +284,7 @@ class ASTToPandas:
             f"{base}.groupby({groupby_str}).agg({', '.join(agg_parts)}).reset_index()"
         )
 
-        # HAVING -> filtrowanie wyniku grupowania, AggExpr mapujemy na alias z agg
+        # HAVING na filtrowanie wyniku grupowania, AggExpr mapujemy na alias z agg
         if stmt.having:
             having_df = "_grouped"
             cond = self._gen_having_condition(stmt.having.cond, having_df, stmt)
@@ -345,7 +342,7 @@ class ASTToPandas:
                     return f'{df}["{item.alias or "count"}"]'
         return self.gen_expr(expr, df)
 
-    # INSERT INTO -> pd.concat z nowym DataFrame
+    # INSERT INTO na pd.concat z nowym DataFrame
     def _gen_insert(self, stmt) -> str:
         table = stmt.table.name
         rows = []
@@ -356,7 +353,7 @@ class ASTToPandas:
                     for col, val in zip(stmt.columns, row)
                 )
             else:
-                # bez listy kolumn — indeksy pozycyjne jako klucze
+                # bez listy kolumn - indeksy pozycyjne jako klucze
                 pairs = ", ".join(
                     f'"{i}": {self._gen_literal(v)}' for i, v in enumerate(row)
                 )
@@ -364,7 +361,7 @@ class ASTToPandas:
         rows_str = ", ".join(rows)
         return f"{table} = pd.concat([{table}, pd.DataFrame([{rows_str}])], ignore_index=True)"
 
-    # UPDATE SET -> df.loc[warunek, kolumna] = wartosc, lub df["col"] = val bez WHERE
+    # UPDATE SET na df.loc[warunek, kolumna] = wartosc, lub df["col"] = val bez WHERE
     def _gen_update(self, stmt) -> str:
         table = stmt.table.name
         lines = []
@@ -377,7 +374,7 @@ class ASTToPandas:
                 lines.append(f'{table}["{col}"] = {val}')
         return "\n".join(lines)
 
-    # DELETE FROM -> df = df[~warunek], bez WHERE usuwa wszystkie wiersze
+    # DELETE FROM na df = df[~warunek], bez WHERE usuwa wszystkie wiersze
     def _gen_delete(self, stmt) -> str:
         table = stmt.table.name
         if stmt.where:
@@ -387,7 +384,7 @@ class ASTToPandas:
 
     # pomocnicze
 
-    # ORDER BY -> .sort_values()
+    # ORDER BY na .sort_values()
     def _apply_orderby(self, base, orderby) -> str:
         cols = [f'"{self._col_name(o.expr)}"' for o in orderby]
         ascs = [str(o.ascending) for o in orderby]
@@ -417,7 +414,7 @@ class ASTToPandas:
             return expr.column
         raise ValueError(f"oczekiwano kolumny: {type(expr)}")
 
-    # mapuje nazwy funkcji SQL na nazwy funkcji Pandas
+    # mapuje nazwy funkcji agregacji SQL na nazwy funkcji pandas
     def _agg_func(self, func) -> str:
         mapping = {
             "COUNT": "count",
@@ -436,7 +433,7 @@ class ASTToPandas:
             return f'"{self._strip_quotes(expr.value)}"'
         raise ValueError(f"nieznany literal: {type(expr)}")
 
-    # usuwa cudzyslowia z literalow sql ('Jan' -> Jan)
+    # usuwa cudzyslowia z literalow sql ('napis' na napis)
     def _strip_quotes(self, s) -> str:
         if len(s) >= 2 and s[0] in ("'", '"') and s[-1] == s[0]:
             return s[1:-1]
