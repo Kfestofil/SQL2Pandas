@@ -42,9 +42,18 @@ def main():
     transformer = TreeToAST()
     generator = ASTToPandas()
     for q in QUERIES:
+        print()
+        print("KWERENDA")
         print(q)
+        print()
         tree = parser.parse(q)
+        print("TREE")
+        print(tree)
         ast = transformer.transform(tree)
+        print("AST")
+        print(ast)
+        print()
+        print("REZULTAT PANDAS")
         print(generator.gen(ast))
         print()
 
@@ -64,12 +73,21 @@ def repl():
             continue
         try:
             tree = parser.parse(sql)
+            print()
+            print("TREE")
+            print(tree)
             ast = transformer.transform(tree)
+            print()
+            print("AST")
+            print(ast)
+            print()
+            print("REZULTAT PANDAS:")
             print(generator.gen(ast))
+            print()
         except Exception as e:
             print(f"blad: {e}")
         print()
-
+        
 
 if __name__ == "__main__":
     main()
