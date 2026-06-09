@@ -228,4 +228,16 @@ class DeleteStmt:
     where: Optional[Condition] = None
 
 
-Stmt = SelectStmt | InsertStmt | UpdateStmt | DeleteStmt
+@dataclass
+class ColumnDef:
+    name: str
+    dtype: str  # pandas dtype: "int64", "float64", "object", "bool", "datetime64[ns]"
+
+
+@dataclass
+class CreateStmt:
+    table: str
+    columns: list[ColumnDef]
+
+
+Stmt = SelectStmt | InsertStmt | UpdateStmt | DeleteStmt | CreateStmt

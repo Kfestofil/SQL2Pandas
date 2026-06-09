@@ -378,6 +378,46 @@ class TreeToAST(Transformer):
         where = items[1] if len(items) > 1 else None
         return nodes.DeleteStmt(table=table, where=where)
 
+    # col_type: "INT"i | "INTEGER"i | "SMALLINT"i | "BIGINT"i -> type_int
+    def type_int(self, items) -> str:
+        return "int64"
+
+    # col_type: "FLOAT"i | "DOUBLE"i | "REAL"i | "DECIMAL"i | "NUMERIC"i -> type_float
+    def type_float(self, items) -> str:
+        return "float64"
+
+    # col_type: "VARCHAR"i | "CHAR"i | "TEXT"i -> type_text
+    def type_text(self, items) -> str:
+        return "object"
+
+    # col_type: "BOOLEAN"i | "BOOL"i -> type_bool
+    def type_bool(self, items) -> str:
+        return "bool"
+
+    # col_type: "DATE"i -> type_date
+    def type_date(self, items) -> str:
+        return "datetime64[ns]"
+
+    # col_type: "DATETIME"i | "TIMESTAMP"i -> type_datetime
+    def type_datetime(self, items) -> str:
+        return "datetime64[ns]"
+
+    # col_def: NAME col_type
+    def col_def(self, items) -> nodes.ColumnDef:
+        name = items[0]
+        dtype = items[1]
+        return nodes.ColumnDef(name=str(name), dtype=dtype)
+
+    # col_def_list: col_def ("," col_def)*
+    def col_def_list(self, items) -> list:
+        return list(items)
+
+    # create_stmt: "CREATE"i "TABLE"i NAME "(" col_def_list ")"
+    def create_stmt(self, items) -> nodes.CreateStmt:
+        table = items[0]
+        columns = items[1]
+        return nodes.CreateStmt(table=str(table), columns=columns)
+
     # start: stmt
     def start(self, items) -> nodes.Stmt:
         stmt = items[0]

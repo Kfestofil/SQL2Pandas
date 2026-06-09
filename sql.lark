@@ -1,9 +1,34 @@
+// tworzenie tablic, pelny zakres mozliwosci do obslugi baz danych
+// zeby dalo sie uzywac, standard input i output
 start: stmt
 
 ?stmt: select_stmt
      | insert_stmt
      | update_stmt
      | delete_stmt
+     | create_stmt
+
+// CREATE TABLE
+create_stmt: "CREATE"i "TABLE"i NAME "(" col_def_list ")"
+col_def_list: col_def ("," col_def)*
+col_def: NAME col_type
+col_type: "INT"i        -> type_int
+        | "INTEGER"i    -> type_int
+        | "SMALLINT"i   -> type_int
+        | "BIGINT"i     -> type_int
+        | "FLOAT"i      -> type_float
+        | "DOUBLE"i     -> type_float
+        | "REAL"i       -> type_float
+        | "DECIMAL"i ("(" INTEGER ("," INTEGER)? ")")?  -> type_float
+        | "NUMERIC"i ("(" INTEGER ("," INTEGER)? ")")?  -> type_float
+        | "VARCHAR"i ("(" INTEGER ")")?                 -> type_text
+        | "CHAR"i ("(" INTEGER ")")?                    -> type_text
+        | "TEXT"i       -> type_text
+        | "BOOLEAN"i    -> type_bool
+        | "BOOL"i       -> type_bool
+        | "DATE"i       -> type_date
+        | "DATETIME"i   -> type_datetime
+        | "TIMESTAMP"i  -> type_datetime
 
 // INSERT
 insert_stmt: "INSERT"i "INTO"i table_ref ["(" column_list ")"] "VALUES"i "(" value_list ")" ("," "(" value_list ")")*

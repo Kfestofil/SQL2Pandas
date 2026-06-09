@@ -16,6 +16,8 @@ class ASTToPandas:
             return self._gen_update(stmt)
         elif isinstance(stmt, nodes.DeleteStmt):
             return self._gen_delete(stmt)
+        elif isinstance(stmt, nodes.CreateStmt):
+            return self._gen_create(stmt)
         raise ValueError(f"nieznany typ: {type(stmt)}")
 
     # wyrazenia
@@ -373,6 +375,14 @@ class ASTToPandas:
             else:
                 lines.append(f'{table}["{col}"] = {val}')
         return "\n".join(lines)
+
+    # CREATE TABLE users (id INT, name VARCHAR) -> users = pd.DataFrame({"id": pd.Series(dtype="int64"), ...})
+    def _gen_create(self, stmt) -> str:
+        parts = ", ".join(
+            f'"{col.name}": pd.Series(dtype="{col.dtype}")'
+            for col in stmt.columns
+        )
+        return f"{stmt.table} = pd.DataFrame({{{parts}}})"
 
     # DELETE FROM na df = df[~warunek], bez WHERE usuwa wszystkie wiersze
     def _gen_delete(self, stmt) -> str:

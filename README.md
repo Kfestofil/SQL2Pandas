@@ -20,7 +20,7 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 
 | Symbol | Opis |
 |---|---|
-| `stmt` | ogólne zapytanie SQL (SELECT, INSERT, UPDATE, DELETE) |
+| `stmt` | ogólne zapytanie SQL (SELECT, INSERT, UPDATE, DELETE, CREATE) |
 | `insert_stmt` | polecenie INSERT INTO |
 | `column_list` | opcjonalna lista kolumn do wstawienia danych w INSERT |
 | `update_stmt` | polecenie UPDATE |
@@ -47,11 +47,15 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 | `value_list` | lista w IN (…) |
 | `agg_star` | agregacja z argumentem `*`, np. `COUNT(*)` |
 | `agg_expr` | agregacja z wyrażeniem, np. `AVG(price)` |
+| `create_stmt` | polecenie CREATE TABLE z listą kolumn i typami |
+| `col_def_list` | lista definicji kolumn w CREATE TABLE |
+| `col_def` | pojedyncza definicja kolumny: nazwa i typ |
+| `col_type` | typ kolumny SQL mapowany na dtype Pandas |
 
 ### Symbole terminalne
 
 #### Słowa kluczowe (case-insensitive)
-`SELECT`, `DISTINCT`, `INSERT`, `INTO`, `VALUES`, `UPDATE`, `SET`, `DELETE`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`, `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`
+`SELECT`, `DISTINCT`, `INSERT`, `INTO`, `VALUES`, `UPDATE`, `SET`, `DELETE`, `FROM`, `AS`, `JOIN`, `INNER`, `LEFT`, `RIGHT`, `FULL`, `ON`, `WHERE`, `AND`, `OR`, `NOT`, `IS`, `NULL`, `LIKE`, `IN`, `BETWEEN`, `GROUP BY`, `HAVING`, `ORDER BY`, `ASC`, `DESC`, `LIMIT`, `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `CREATE`, `TABLE`, `INT`, `INTEGER`, `SMALLINT`, `BIGINT`, `FLOAT`, `DOUBLE`, `REAL`, `DECIMAL`, `NUMERIC`, `VARCHAR`, `CHAR`, `TEXT`, `BOOLEAN`, `BOOL`, `DATE`, `DATETIME`, `TIMESTAMP`
 
 #### Operatory i separatory
 
@@ -70,6 +74,86 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 | `,` | separator listy |
 | `(` `)` | nawiasy |
 | `.` | kwalifikator tabeli |
+
+## Dzialanie programu
+
+1. **Parser (Lark)** - `sql.lark` definiuje gramatykę, Lark buduje drzewo parsowania
+2. **TreeToAST** - `tree_to_ast.py` zamienia drzewo Larka na obiekty dataclass z `ast_nodes.py`
+3. **ASTToPandas** - `ast_to_pandas.py` przechodzi AST i generuje string z kodem Pandas
+
+## Uruchamianie
+
+Bez argumentów program wyświetla instrukcję obsługi:
+
+```bash
+uv run main.py
+```
+
+### Flagi
+
+| Flaga | Opis |
+|---|---|
+| `-i plik` | wczytaj dane z pliku `.csv` lub `.sql`/`.dump` - można podać wiele razy |
+| `-f plik.sql` | wykonaj komendy SQL z pliku (jedna per linia) |
+| `-o plik` | eksportuj wszystkie tabele po wykonaniu (`.csv` lub `.pkl`) |
+
+### Wczytywanie danych (`-i`)
+
+Typ pliku wykrywany jest po rozszerzeniu:
+- `.csv` - wczytuje plik jako DataFrame, nazwa tabeli = nazwa pliku
+- `.sql` / `.dump` - wykonuje `CREATE TABLE` i `INSERT INTO` z pliku, pomija nieobsługiwane komendy
+
+```bash
+uv run main.py -i dump.sql -i orders.csv
+```
+
+### Wykonywanie komend z pliku (`-f`)
+
+```bash
+uv run main.py -i dane.sql -f komendy.sql
+```
+
+Plik z komendami - jedno zapytanie SQL per linia, linie zaczynające się od `--` są pomijane.
+
+Można też przekazać komendy przez stdin:
+
+```bash
+uv run main.py -i dane.sql < komendy.sql
+```
+
+### Eksport danych (`-o`)
+
+```bash
+uv run main.py -i dane.sql -f komendy.sql -o wynik.csv
+```
+
+Eksportuje każdą tabelę do osobnego pliku `{nazwa}.csv` lub `{nazwa}.pkl`. Po eksporcie program kończy działanie bez otwierania REPL.
+
+### REPL
+
+Po wczytaniu danych (bez flagi `-o`) program uruchamia interaktywny REPL. Wpisz zapytanie SQL, program wypisze wynik jako tabelę oraz wygenerowany kod Pandas. Wyjście przez `q`.
+
+### Przykładowe pliki
+
+W katalogu `example/` znajdują się:
+- `dump.sql` - dump z `CREATE TABLE` i `INSERT INTO`
+- `orders.csv` - dane w formacie CSV
+- `queries.sql` - przykładowe zapytania
+
+```bash
+uv run main.py -i example/dump.sql -i example/orders.csv < example/queries.sql
+```
+
+#### Typy danych
+
+| Typ SQL | dtype Pandas |
+|---|---|
+| `INT`, `INTEGER`, `BIGINT`, `SMALLINT` | `int64` |
+| `FLOAT`, `DOUBLE`, `REAL` | `float64` |
+| `DECIMAL(p,s)`, `NUMERIC(p,s)` | `float64` |
+| `VARCHAR(n)`, `TEXT`, `CHAR(n)` | `object` |
+| `BOOLEAN`, `BOOL` | `bool` |
+| `DATE`, `DATETIME`, `TIMESTAMP` | `datetime64[ns]` |
 
 #### Literały i identyfikatory
 
