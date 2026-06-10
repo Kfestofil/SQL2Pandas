@@ -133,7 +133,7 @@ qualified_col: NAME "." NAME
 
 // operatory porownania
 comp_op: "="	-> eq
-       | "!=" | "<>"	-> neq
+       | "!=" -> neq | "<>" -> neq
        | "<"	-> lt
        | ">"	-> gt
        | "<="	-> lte

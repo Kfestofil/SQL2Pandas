@@ -102,15 +102,24 @@ uv run main.py
 Typ pliku wykrywany jest po rozszerzeniu:
 - `.csv` - wczytuje plik jako DataFrame, nazwa tabeli = nazwa pliku
 - `.sql` / `.dump` - wykonuje `CREATE TABLE` i `INSERT INTO` z pliku, pomija nieobsługiwane komendy
+- `.pkl` - wczytuje pojedynczy DataFrame lub słownik DataFrames zapisany wcześniej przez `-o`
 
 ```bash
-uv run main.py -i dump.sql -i orders.csv
+# dwie tabele naraz
+uv run main.py -i example/dump.sql -i example/orders.csv
+
+# import z wcześniej wyeksportowanego pickle
+uv run main.py -i wynik.pkl
 ```
 
 ### Wykonywanie komend z pliku (`-f`)
 
 ```bash
-uv run main.py -i dane.sql -f komendy.sql
+# podstawowe zapytania z dumpa SQL
+uv run main.py -i example/dump.sql -f example/queries.sql
+
+# dwie tabele, komendy z pliku
+uv run main.py -i example/dump.sql -i example/orders.csv -f example/queries.sql
 ```
 
 Plik z komendami - jedno zapytanie SQL per linia, linie zaczynające się od `--` są pomijane.
@@ -118,30 +127,47 @@ Plik z komendami - jedno zapytanie SQL per linia, linie zaczynające się od `--
 Można też przekazać komendy przez stdin:
 
 ```bash
-uv run main.py -i dane.sql < komendy.sql
+cat example/queries.sql | uv run main.py -i example/dump.sql
+
+# lub operatorem przekierowania
+uv run main.py -i example/dump.sql < example/queries.sql
+```
+
+Przez stdin można też przekazać dump SQL (CREATE TABLE + INSERT INTO):
+
+```bash
+cat example/dump.sql | uv run main.py
 ```
 
 ### Eksport danych (`-o`)
 
 ```bash
-uv run main.py -i dane.sql -f komendy.sql -o wynik.csv
+# eksport do CSV - jedna tabela: wynik.csv, wiele tabel: wynik_products.csv, wynik_orders.csv
+uv run main.py -i example/dump.sql -i example/orders.csv -o wynik.csv
+
+# eksport do pickle - wszystkie tabele w jednym pliku jako slownik
+uv run main.py -i example/dump.sql -i example/orders.csv -o wynik.pkl
 ```
 
-Eksportuje każdą tabelę do osobnego pliku `{nazwa}.csv` lub `{nazwa}.pkl`. Po eksporcie program kończy działanie bez otwierania REPL.
+Po eksporcie program kończy działanie bez otwierania REPL.
 
 ### REPL
 
-Po wczytaniu danych (bez flagi `-o`) program uruchamia interaktywny REPL. Wpisz zapytanie SQL, program wypisze wynik jako tabelę oraz wygenerowany kod Pandas. Wyjście przez `q`.
+Po wczytaniu danych (bez flagi `-o`) program uruchamia interaktywny REPL. Wpisz zapytanie SQL, program wypisze wynik jako tabelę oraz wygenerowany kod Pandas.
+
+Komendy REPL:
+- `q` - wyjście
+- `e` - eksportuj ostatni wynik SELECT do pliku (pyta o nazwę, obsługuje `.csv` i `.pkl`)
 
 ### Przykładowe pliki
 
 W katalogu `example/` znajdują się:
-- `dump.sql` - dump z `CREATE TABLE` i `INSERT INTO`
-- `orders.csv` - dane w formacie CSV
+- `csv/` - dane sklepu rowerowego (9 tabel: produkty, zamówienia, klienci, itp.) — źródło: [Bike Store Sample Database (Kaggle)](https://www.kaggle.com/datasets/dillonmyrick/bike-store-sample-database?resource=download)
+- `sql/dump.sql` - wygenerowany dump SQL z tych samych danych (10 wierszy na tabelę)
 - `queries.sql` - przykładowe zapytania
 
 ```bash
-uv run main.py -i example/dump.sql -i example/orders.csv < example/queries.sql
+./skrypt.sh
 ```
 
 #### Typy danych

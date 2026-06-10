@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import pandas as pd
@@ -48,6 +49,22 @@ def _load_sql(path: Path, grammar_path: Path) -> dict[str, pd.DataFrame]:
     return active_dataframes
 
 
+def _load_pkl(path: Path) -> dict[str, pd.DataFrame]:
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    if isinstance(data, pd.DataFrame):
+        name = path.stem
+        print(f"zaladowano {path} jako tabele '{name}' ({len(data)} wierszy)")
+        return {name: data}
+    elif isinstance(data, dict):
+        result = {k: v for k, v in data.items() if isinstance(v, pd.DataFrame)}
+        for name, df in result.items():
+            print(f"zaladowano '{name}' ({len(df)} wierszy)")
+        return result
+    else:
+        raise ValueError(f"plik pkl nie zawiera DataFrame ani slownika DataFrame")
+
+
 def load(path_str: str, grammar_path: Path) -> dict[str, pd.DataFrame]:
     path = Path(path_str)
     if not path.exists():
@@ -57,5 +74,7 @@ def load(path_str: str, grammar_path: Path) -> dict[str, pd.DataFrame]:
         return _load_csv(path)
     elif suffix in (".sql", ".dump"):
         return _load_sql(path, grammar_path)
+    elif suffix == ".pkl":
+        return _load_pkl(path)
     else:
-        raise ValueError(f"nieznane rozszerzenie: {suffix} (obslugiwane: .csv, .sql, .dump)")
+        raise ValueError(f"nieznane rozszerzenie: {suffix} (obslugiwane: .csv, .sql, .dump, .pkl)")

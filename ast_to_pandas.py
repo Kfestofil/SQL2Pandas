@@ -173,10 +173,9 @@ class ASTToPandas:
 
     # SELECT: obsluguje joiny (pd.merge), potem deleguje do _gen_simple lub _gen_groupby
     def _gen_select(self, stmt) -> str:
-        df = stmt.table.alias or stmt.table.name
-
         # JOIN na pd.merge, wynik staje sie nowym df
         if stmt.joins:
+            df = stmt.table.alias or stmt.table.name
             lines = []
             current = stmt.table.name
             for join in stmt.joins:
@@ -191,7 +190,7 @@ class ASTToPandas:
             lines.append(self._gen_select_body(stmt, df))
             return "\n".join(lines)
 
-        return self._gen_select_body(stmt, df)
+        return self._gen_select_body(stmt, stmt.table.name)
 
     # rozpoznaje czy SELECT ma agregacje
     def _gen_select_body(self, stmt, df) -> str:
@@ -215,26 +214,24 @@ class ASTToPandas:
         # SELECT lista kolumn, jezeli sa wyrazenia obliczane to .assign()
         if stmt.columns:
             has_computed = any(
-                not isinstance(item.expr, (nodes.ColExpr, nodes.QualifiedCol))
+                not isinstance(item.expr, (nodes.ColExpr, nodes.QualifiedCol)) or item.alias
                 for item in stmt.columns
             )
             if has_computed:
                 assigns = {}
                 col_names = []
                 for item in stmt.columns:
-                    if isinstance(item.expr, (nodes.ColExpr, nodes.QualifiedCol)):
-                        col_names.append(item.alias or self._col_name(item.expr))
+                    if isinstance(item.expr, (nodes.ColExpr, nodes.QualifiedCol)) and not item.alias:
+                        col_names.append(self._col_name(item.expr))
                     else:
                         alias = item.alias or f"_col{len(assigns)}"
-                        assigns[alias] = self.gen_expr(item.expr, df)
+                        assigns[alias] = f"lambda _x: {self.gen_expr(item.expr, '_x')}"
                         col_names.append(alias)
                 assign_str = ", ".join(f"{k}={v}" for k, v in assigns.items())
                 cols_str = ", ".join(f'"{c}"' for c in col_names)
                 base = f"{base}.assign({assign_str})[[{cols_str}]]"
             else:
-                col_names = [
-                    item.alias or self._col_name(item.expr) for item in stmt.columns
-                ]
+                col_names = [self._col_name(item.expr) for item in stmt.columns]
                 cols_str = ", ".join(f'"{c}"' for c in col_names)
                 base = f"{base}[[{cols_str}]]"
 
@@ -263,7 +260,23 @@ class ASTToPandas:
             base = f"{df}[{self.gen_condition(stmt.where, df)}]"
 
         # GROUP BY klucze
-        groupby_cols = [self._col_name(e) for e in stmt.groupby]
+        groupby_cols = [self._col_name(e) for e in stmt.groupby] if stmt.groupby else []
+
+        # agregacja bez GROUP BY -> jeden wiersz ze skalarami
+        if not groupby_cols:
+            agg_map = {"count": "count", "sum": "sum", "avg": "mean", "min": "min", "max": "max"}
+            parts = []
+            for item in stmt.columns:
+                if isinstance(item.expr, nodes.AggStar):
+                    alias = item.alias or "count"
+                    parts.append(f'"{alias}": len({base})')
+                elif isinstance(item.expr, nodes.AggExpr):
+                    col = self._col_name(item.expr.expr)
+                    func = self._agg_func(item.expr.func)
+                    alias = item.alias or f"{func}_{col}"
+                    parts.append(f'"{alias}": {base}["{col}"].{agg_map.get(func, func)}()')
+            return f'pd.DataFrame([{{{", ".join(parts)}}}])'
+
         if len(groupby_cols) == 1:
             groupby_str = f'"{groupby_cols[0]}"'
         else:
