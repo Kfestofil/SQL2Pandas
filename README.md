@@ -77,10 +77,6 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 
 ## Gramatyka
  
-Poniżej opisana jest gramatyka języka SQL obsługiwanego przez program. Zapis używa konwencji zbliżonej do EBNF: elementy opcjonalne oznaczone są nawiasami kwadratowymi `[...]`, powtórzenia gwiazdką `*` lub plusem `+`, a alternatywy pionową kreską `|`. Słowa kluczowe zapisane są WERSALIKAMI.
- 
----
- 
 ### Punkt wejścia
  
 Program przyjmuje jeden lub więcej poleceń SQL oddzielonych średnikami. Końcowy średnik jest opcjonalny.
