@@ -418,7 +418,6 @@ class TreeToAST(Transformer):
         columns = items[1]
         return nodes.CreateStmt(table=str(table), columns=columns)
 
-    # start: stmt
-    def start(self, items) -> nodes.Stmt:
-        stmt = items[0]
-        return stmt
+    # start: stmt (";" stmt)* ";"?
+    def start(self, items) -> list:
+        return list(items)

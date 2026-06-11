@@ -18,29 +18,41 @@ def make_parser() -> Lark:
     return Lark(GRAMMAR.read_text(), start="start", parser="earley")
 
 
-def run_query(sql, parser, transformer, generator, active_dataframes) -> "pd.DataFrame | None":
-    sql = sql.rstrip(";")
-    try:
-        tree = parser.parse(sql)
-        ast = transformer.transform(tree)
-        code = generator.gen(ast)
-        if isinstance(ast, SelectStmt):
-            local = {}
-            g = {"pd": pd, **active_dataframes}
-            lines = code.split("\n")
-            if len(lines) > 1:
-                exec("\n".join(lines[:-1]), g, local)
-                exec(f"_result = {lines[-1]}", {**g, **local}, local)
-            else:
-                exec(f"_result = {code}", g, local)
-            res = local.get("_result")
-            if isinstance(res, pd.DataFrame):
-                print(res.to_string(index=False))
-            print(code)
-            return res if isinstance(res, pd.DataFrame) else None
+def _exec_stmt(ast, generator, active_dataframes) -> "pd.DataFrame | None":
+    code = generator.gen(ast)
+    if isinstance(ast, SelectStmt):
+        local = {}
+        g = {"pd": pd, **active_dataframes}
+        lines = code.split("\n")
+        if len(lines) > 1:
+            exec("\n".join(lines[:-1]), g, local)
+            exec(f"_result = {lines[-1]}", {**g, **local}, local)
         else:
-            exec(code, {"pd": pd, **active_dataframes}, active_dataframes)
-            print(code)
+            exec(f"_result = {code}", g, local)
+        res = local.get("_result")
+        if isinstance(res, pd.DataFrame):
+            print(res.to_string(index=False))
+        print(code)
+        return res if isinstance(res, pd.DataFrame) else None
+    else:
+        exec(code, {"pd": pd, **active_dataframes}, active_dataframes)
+        print(code)
+    return None
+
+
+def run_query(sql, parser, transformer, generator, active_dataframes) -> "pd.DataFrame | None":
+    try:
+        stmts = transformer.transform(parser.parse(sql.strip()))
+        last_result = None
+        for ast in stmts:
+            try:
+                result = _exec_stmt(ast, generator, active_dataframes)
+                if result is not None:
+                    last_result = result
+            except Exception as e:
+                print(f"blad: {e}")
+            print()
+        return last_result
     except Exception as e:
         print(f"blad: {e}")
     return None
@@ -70,13 +82,7 @@ def run_file(path, active_dataframes):
     parser = make_parser()
     transformer = TreeToAST()
     generator = ASTToPandas()
-    queries = Path(path).read_text().splitlines()
-    for sql in queries:
-        sql = sql.strip()
-        if not sql or sql.startswith("--"):
-            continue
-        run_query(sql, parser, transformer, generator, active_dataframes)
-        print()
+    run_query(Path(path).read_text(), parser, transformer, generator, active_dataframes)
 
 
 def repl(active_dataframes):
@@ -105,7 +111,6 @@ def repl(active_dataframes):
         result = run_query(sql, parser, transformer, generator, active_dataframes)
         if result is not None:
             last_result = result
-        print()
 
 
 if __name__ == "__main__":
