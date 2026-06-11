@@ -32,6 +32,9 @@ def run_query(
             ast = ast[0]
         code = generator.gen(ast)
 
+
+        print("# --- oryginalny kod sql ---")
+        print(sql)
         print("# --- wygenerowany kod pandas ---")
         print(code)
         print("# --------------------------------")
