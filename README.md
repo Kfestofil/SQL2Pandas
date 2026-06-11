@@ -75,6 +75,217 @@ Program ma za zadanie kompilować zapytania SQL do równoważnych operacji pytho
 | `(` `)` | nawiasy |
 | `.` | kwalifikator tabeli |
 
+## Gramatyka
+ 
+Poniżej opisana jest gramatyka języka SQL obsługiwanego przez program. Zapis używa konwencji zbliżonej do EBNF: elementy opcjonalne oznaczone są nawiasami kwadratowymi `[...]`, powtórzenia gwiazdką `*` lub plusem `+`, a alternatywy pionową kreską `|`. Słowa kluczowe zapisane są WERSALIKAMI.
+ 
+---
+ 
+### Punkt wejścia
+ 
+Program przyjmuje jeden lub więcej poleceń SQL oddzielonych średnikami. Końcowy średnik jest opcjonalny.
+ 
+```
+program ::= polecenie (";" polecenie)* ";"?
+```
+ 
+---
+ 
+### Rodzaje poleceń
+ 
+Każde polecenie jest jednym z pięciu typów:
+ 
+```
+polecenie ::= select_stmt
+            | insert_stmt
+            | update_stmt
+            | delete_stmt
+            | create_stmt
+```
+ 
+---
+ 
+### CREATE TABLE
+ 
+Tworzy nową tabelę o podanej nazwie z listą kolumn i ich typami.
+ 
+```
+create_stmt   ::= CREATE TABLE nazwa "(" lista_kolumn ")"
+lista_kolumn  ::= definicja_kolumny ("," definicja_kolumny)*
+definicja_kolumny ::= nazwa typ_kolumny
+```
+ 
+Obsługiwane typy kolumn i ich mapowanie na typy Pandas:
+ 
+| Typ SQL | Warianty | dtype Pandas |
+|---|---|---|
+| całkowity | `INT`, `INTEGER`, `SMALLINT`, `BIGINT` | `int64` |
+| zmiennoprzecinkowy | `FLOAT`, `DOUBLE`, `REAL`, `DECIMAL[(p,s)]`, `NUMERIC[(p,s)]` | `float64` |
+| tekstowy | `VARCHAR[(n)]`, `CHAR[(n)]`, `TEXT` | `object` |
+| logiczny | `BOOLEAN`, `BOOL` | `bool` |
+| data | `DATE` | `datetime64[ns]` |
+| data i czas | `DATETIME`, `TIMESTAMP` | `datetime64[ns]` |
+ 
+---
+ 
+### INSERT INTO
+ 
+Wstawia jeden lub więcej wierszy do tabeli. Lista kolumn jest opcjonalna — jeśli jej brak, wartości przypisywane są po kolei do wszystkich kolumn tabeli.
+ 
+```
+insert_stmt ::= INSERT INTO tabela ["(" kolumna ("," kolumna)* ")"]
+                VALUES "(" lista_wartości ")" ("," "(" lista_wartości ")")*
+```
+ 
+Przykład:
+```sql
+INSERT INTO products (product_id, name, price) VALUES (1, 'Bike', 999.99), (2, 'Helmet', 49.99);
+```
+ 
+---
+ 
+### UPDATE
+ 
+Modyfikuje wartości wybranych kolumn w wierszach spełniających opcjonalny warunek WHERE.
+ 
+```
+update_stmt ::= UPDATE tabela SET przypisanie ("," przypisanie)* [warunek_where]
+przypisanie ::= kolumna "=" wyrażenie
+```
+ 
+Przykład:
+```sql
+UPDATE products SET price = price * 1.1 WHERE category_id = 3;
+```
+ 
+---
+ 
+### DELETE FROM
+ 
+Usuwa wiersze spełniające opcjonalny warunek WHERE. Bez klauzuli WHERE usuwa wszystkie wiersze.
+ 
+```
+delete_stmt ::= DELETE FROM tabela [warunek_where]
+```
+ 
+Przykład:
+```sql
+DELETE FROM orders WHERE status = 'cancelled';
+```
+ 
+---
+ 
+### SELECT
+ 
+Najbardziej rozbudowane polecenie. Składa się z obowiązkowego rdzenia (`SELECT … FROM`) oraz szeregu opcjonalnych klauzul, które muszą wystąpić w podanej kolejności.
+ 
+```
+select_stmt ::= SELECT [DISTINCT] lista_select
+                FROM tabela
+                join_clause*
+                [WHERE warunek]
+                [GROUP BY wyrażenie ("," wyrażenie)*]
+                [HAVING warunek]
+                [ORDER BY element_sortowania ("," element_sortowania)*]
+                [LIMIT liczba_całkowita]
+```
+ 
+#### Lista SELECT
+ 
+Może być gwiazdką `*` (wszystkie kolumny) lub listą wyrażeń z opcjonalnymi aliasami:
+ 
+```
+lista_select   ::= "*"
+                 | element_select ("," element_select)*
+element_select ::= wyrażenie [AS alias]
+```
+ 
+#### Odwołanie do tabeli
+ 
+Tabela może mieć opcjonalny alias:
+ 
+```
+tabela ::= nazwa [AS alias]
+```
+ 
+#### Klauzula JOIN
+ 
+Obsługiwane są cztery rodzaje złączeń. Domyślnym (gdy nie podano słowa kluczowego rodzaju) jest INNER JOIN.
+ 
+```
+join_clause ::= [rodzaj_join] JOIN tabela ON warunek
+rodzaj_join ::= INNER | LEFT | RIGHT | FULL
+```
+ 
+#### Klauzula ORDER BY
+ 
+Każdy element sortowania wskazuje wyrażenie oraz kierunek (domyślnie rosnąco):
+ 
+```
+element_sortowania ::= wyrażenie [ASC | DESC]
+```
+ 
+---
+ 
+### Wyrażenia arytmetyczne
+ 
+Wyrażenia budowane są hierarchicznie według priorytetów operatorów (od najniższego do najwyższego):
+ 
+```
+wyrażenie   ::= wyrażenie_dodawania
+wyrażenie_dodawania ::= wyrażenie_dodawania ("+" | "-") wyrażenie_mnożenia
+                      | wyrażenie_mnożenia
+wyrażenie_mnożenia  ::= wyrażenie_mnożenia ("*" | "/") wyrażenie_unarne
+                      | wyrażenie_unarne
+wyrażenie_unarne    ::= "-" wyrażenie_pierwotne
+                      | wyrażenie_pierwotne
+wyrażenie_pierwotne ::= "(" wyrażenie ")"
+                      | funkcja_agregująca "(" "*" ")"
+                      | funkcja_agregująca "(" wyrażenie ")"
+                      | tabela "." kolumna
+                      | liczba
+                      | tekst
+                      | nazwa_kolumny
+```
+ 
+Obsługiwane funkcje agregujące: `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`.
+ 
+---
+ 
+### Warunki logiczne
+ 
+Warunki budowane są hierarchicznie według priorytetów operatorów logicznych (od najniższego do najwyższego: `OR` < `AND` < `NOT` < porównanie):
+ 
+```
+warunek         ::= warunek OR warunek_and
+                  | warunek_and
+warunek_and     ::= warunek_and AND warunek_not
+                  | warunek_not
+warunek_not     ::= NOT warunek_not
+                  | warunek_porównania
+warunek_porównania ::= wyrażenie operator_porównania wyrażenie
+                     | wyrażenie IS [NOT] NULL
+                     | wyrażenie [NOT] LIKE tekst
+                     | wyrażenie [NOT] IN "(" lista_wartości ")"
+                     | wyrażenie [NOT] BETWEEN wyrażenie AND wyrażenie
+                     | "(" warunek ")"
+```
+ 
+Operatory porównania: `=`, `!=`, `<>`, `<`, `>`, `<=`, `>=`.
+ 
+---
+ 
+### Literały i identyfikatory
+ 
+| Token | Opis | Przykłady |
+|---|---|---|
+| `nazwa` | identyfikator (litera lub `_` na początku, potem litery/cyfry/`_`) | `users`, `order_id`, `_tmp` |
+| `liczba_całkowita` | sekwencja cyfr | `42`, `1000` |
+| `liczba` | liczba całkowita lub dziesiętna | `3.14`, `100`, `1.` |
+| `tekst` | łańcuch w apostrofach lub cudzysłowach | `'Jan'`, `"ABC"` |
+ 
+---
+
 ## Dzialanie programu
 
 1. **Parser (Lark)** - `sql.lark` definiuje gramatykę, Lark buduje drzewo parsowania
