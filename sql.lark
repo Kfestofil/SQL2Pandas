@@ -1,5 +1,3 @@
-// tworzenie tablic, pelny zakres mozliwosci do obslugi baz danych
-// zeby dalo sie uzywac, standard input i output
 start: stmt
 
 ?stmt: select_stmt

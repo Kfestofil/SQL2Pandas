@@ -4,8 +4,8 @@ from pathlib import Path
 import pandas as pd
 from lark import Lark
 
-from ast_to_pandas import ASTToPandas
 from ast_nodes import CreateStmt, InsertStmt
+from ast_to_pandas import ASTToPandas
 from tree_to_ast import TreeToAST
 
 
@@ -34,13 +34,11 @@ def _load_sql(path: Path, grammar_path: Path) -> dict[str, pd.DataFrame]:
         try:
             ast = transformer.transform(parser.parse(sql))
             code = generator.gen(ast)
-            # CREATE i INSERT modyfikuja active_dataframes
             if isinstance(ast, (CreateStmt, InsertStmt)):
                 exec(code, {"pd": pd, **active_dataframes}, active_dataframes)
                 if isinstance(ast, CreateStmt):
                     print(f"utworzono tabele '{ast.table}'")
         except Exception:
-            # pomijamy linie ktorych nie umiemy sparsowac (np. DROP, ALTER, komentarze blokowe)
             pass
 
     for name, df in active_dataframes.items():
@@ -77,4 +75,6 @@ def load(path_str: str, grammar_path: Path) -> dict[str, pd.DataFrame]:
     elif suffix == ".pkl":
         return _load_pkl(path)
     else:
-        raise ValueError(f"nieznane rozszerzenie: {suffix} (obslugiwane: .csv, .sql, .dump, .pkl)")
+        raise ValueError(
+            f"nieznane rozszerzenie: {suffix} (obslugiwane: .csv, .sql, .dump, .pkl)"
+        )
