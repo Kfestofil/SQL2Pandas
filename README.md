@@ -396,3 +396,25 @@ W katalogu `example/` znajdują się:
 | `INTEGER` | `42` | `/[0-9]+/` |
 | `NUMBER` | `3.14`, `1.` | `/[0-9]+\.[0-9]*/` |
 | `STRING` | `'Jan'`, `"ABC"` | `/('[^']*')|("[^"]*")/` |
+
+## Przykład działania
+
+**Wejście (SQL):**
+
+```sql
+SELECT * FROM products;
+SELECT product_name, list_price FROM products;
+SELECT * FROM customers WHERE state = 'NY';
+SELECT product_name, list_price FROM products WHERE list_price > 1000;
+SELECT product_name, list_price FROM products WHERE list_price <= 500;
+```
+
+**Wyjście (Pandas):**
+
+```python
+products
+products[["product_name", "list_price"]]
+customers[(customers["state"] == "NY")]
+products[(products["list_price"] > 1000)][["product_name", "list_price"]]
+products[(products["list_price"] <= 500)][["product_name", "list_price"]]
+```

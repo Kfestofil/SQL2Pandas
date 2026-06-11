@@ -18,7 +18,7 @@ def make_parser() -> Lark:
     return Lark(GRAMMAR.read_text(), start="start", parser="earley")
 
 
-def _exec_stmt(ast, generator, active_dataframes) -> "pd.DataFrame | None":
+def _exec_stmt(ast, generator, active_dataframes, show_results=False) -> "pd.DataFrame | None":
     code = generator.gen(ast)
     if isinstance(ast, SelectStmt):
         local = {}
@@ -30,7 +30,7 @@ def _exec_stmt(ast, generator, active_dataframes) -> "pd.DataFrame | None":
         else:
             exec(f"_result = {code}", g, local)
         res = local.get("_result")
-        if isinstance(res, pd.DataFrame):
+        if show_results and isinstance(res, pd.DataFrame):
             print(res.to_string(index=False))
         print(code)
         return res if isinstance(res, pd.DataFrame) else None
@@ -40,18 +40,17 @@ def _exec_stmt(ast, generator, active_dataframes) -> "pd.DataFrame | None":
     return None
 
 
-def run_query(sql, parser, transformer, generator, active_dataframes) -> "pd.DataFrame | None":
+def run_query(sql, parser, transformer, generator, active_dataframes, show_results=False) -> "pd.DataFrame | None":
     try:
         stmts = transformer.transform(parser.parse(sql.strip()))
         last_result = None
         for ast in stmts:
             try:
-                result = _exec_stmt(ast, generator, active_dataframes)
+                result = _exec_stmt(ast, generator, active_dataframes, show_results=show_results)
                 if result is not None:
                     last_result = result
             except Exception as e:
                 print(f"blad: {e}")
-            print()
         return last_result
     except Exception as e:
         print(f"blad: {e}")
@@ -93,8 +92,7 @@ def repl(active_dataframes):
     print(f"zaladowane tabele: {', '.join(active_dataframes.keys())}")
     while True:
         try:
-            prompt = "podaj sql (wyjscie q, eksport e): " if sys.stdin.isatty() else ""
-            sql = input(prompt).strip()
+            sql = input("podaj sql (wyjscie q, eksport e): ").strip()
         except EOFError:
             break
         if sql == "q":
@@ -108,7 +106,7 @@ def repl(active_dataframes):
             continue
         if not sql or sql.startswith("--"):
             continue
-        result = run_query(sql, parser, transformer, generator, active_dataframes)
+        result = run_query(sql, parser, transformer, generator, active_dataframes, show_results=True)
         if result is not None:
             last_result = result
 
@@ -127,9 +125,14 @@ if __name__ == "__main__":
         metavar="plik",
         help="eksportuj tabele po wykonaniu (.csv lub .pkl)",
     )
+    arg_parser.add_argument(
+        "-r",
+        action="store_true",
+        help="uruchom interaktywny REPL",
+    )
     args = arg_parser.parse_args()
 
-    if not args.i and not args.f and sys.stdin.isatty():
+    if not args.i and not args.f and not args.r and sys.stdin.isatty():
         arg_parser.print_help()
         sys.exit(0)
 
@@ -138,14 +141,20 @@ if __name__ == "__main__":
     if args.i:
         for file_path in args.i:
             try:
-                active_dataframes.update(load(file_path, GRAMMAR))
+                active_dataframes.update(load(file_path, GRAMMAR, verbose=args.r))
             except (FileNotFoundError, ValueError) as e:
                 print(f"blad: {e}")
                 sys.exit(1)
-        print()
+        if args.r:
+            print()
 
     if args.f:
         run_file(args.f, active_dataframes)
+    elif not sys.stdin.isatty() and not args.r:
+        parser = make_parser()
+        transformer = TreeToAST()
+        generator = ASTToPandas()
+        run_query(sys.stdin.read(), parser, transformer, generator, active_dataframes)
 
     if args.o:
         p = Path(args.o)
@@ -167,5 +176,6 @@ if __name__ == "__main__":
         else:
             print(f"blad: nieznane rozszerzenie {suffix} (obslugiwane: .csv, .pkl)")
             sys.exit(1)
-    else:
+
+    if args.r:
         repl(active_dataframes)
