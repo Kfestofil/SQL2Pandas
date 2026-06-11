@@ -18,8 +18,11 @@ def make_parser() -> Lark:
     return Lark(GRAMMAR.read_text(), start="start", parser="earley")
 
 
-def _exec_stmt(ast, generator, active_dataframes, show_results=False) -> "pd.DataFrame | None":
+def _exec_stmt(ast, generator, active_dataframes, execute=False, show_results=False) -> "pd.DataFrame | None":
     code = generator.gen(ast)
+    if not execute:
+        print(code)
+        return None
     if isinstance(ast, SelectStmt):
         local = {}
         g = {"pd": pd, **active_dataframes}
@@ -40,13 +43,13 @@ def _exec_stmt(ast, generator, active_dataframes, show_results=False) -> "pd.Dat
     return None
 
 
-def run_query(sql, parser, transformer, generator, active_dataframes, show_results=False) -> "pd.DataFrame | None":
+def run_query(sql, parser, transformer, generator, active_dataframes, execute=False, show_results=False) -> "pd.DataFrame | None":
     try:
         stmts = transformer.transform(parser.parse(sql.strip()))
         last_result = None
         for ast in stmts:
             try:
-                result = _exec_stmt(ast, generator, active_dataframes, show_results=show_results)
+                result = _exec_stmt(ast, generator, active_dataframes, execute=execute, show_results=show_results)
                 if result is not None:
                     last_result = result
             except Exception as e:
@@ -77,11 +80,11 @@ def _export_df(df: pd.DataFrame):
         print(f"blad: nieznane rozszerzenie {suffix} (obslugiwane: .csv, .pkl)")
 
 
-def run_file(path, active_dataframes):
+def run_file(path, active_dataframes, execute=False):
     parser = make_parser()
     transformer = TreeToAST()
     generator = ASTToPandas()
-    run_query(Path(path).read_text(), parser, transformer, generator, active_dataframes)
+    run_query(Path(path).read_text(), parser, transformer, generator, active_dataframes, execute=execute)
 
 
 def repl(active_dataframes):
@@ -106,7 +109,7 @@ def repl(active_dataframes):
             continue
         if not sql or sql.startswith("--"):
             continue
-        result = run_query(sql, parser, transformer, generator, active_dataframes, show_results=True)
+        result = run_query(sql, parser, transformer, generator, active_dataframes, execute=True, show_results=True)
         if result is not None:
             last_result = result
 
@@ -130,6 +133,11 @@ if __name__ == "__main__":
         action="store_true",
         help="uruchom interaktywny REPL",
     )
+    arg_parser.add_argument(
+        "-x",
+        action="store_true",
+        help="wykonaj kod (domyslnie tylko tlumaczy)",
+    )
     args = arg_parser.parse_args()
 
     if not args.i and not args.f and not args.r and sys.stdin.isatty():
@@ -149,12 +157,12 @@ if __name__ == "__main__":
             print()
 
     if args.f:
-        run_file(args.f, active_dataframes)
+        run_file(args.f, active_dataframes, execute=args.x)
     elif not sys.stdin.isatty() and not args.r:
         parser = make_parser()
         transformer = TreeToAST()
         generator = ASTToPandas()
-        run_query(sys.stdin.read(), parser, transformer, generator, active_dataframes)
+        run_query(sys.stdin.read(), parser, transformer, generator, active_dataframes, execute=args.x)
 
     if args.o:
         p = Path(args.o)

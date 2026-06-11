@@ -300,9 +300,11 @@ uv run main.py
 
 | Flaga | Opis |
 |---|---|
-| `-i plik` | wczytaj dane z pliku `.csv` lub `.sql`/`.dump` - można podać wiele razy |
-| `-f plik.sql` | wykonaj komendy SQL z pliku (jedna per linia) |
-| `-o plik` | eksportuj wszystkie tabele po wykonaniu (`.csv` lub `.pkl`) |
+| `-i plik` | wczytaj dane z pliku `.csv`, `.sql`/`.dump` lub `.pkl` — można podać wiele razy |
+| `-f plik.sql` | tłumacz komendy SQL z pliku |
+| `-x` | wykonaj wygenerowany kod (domyślnie program tylko tłumaczy) |
+| `-r` | uruchom interaktywny REPL (zawsze wykonuje) |
+| `-o plik` | eksportuj tabele do pliku `.csv` lub `.pkl` (wymaga `-x`) |
 
 ### Wczytywanie danych (`-i`)
 
@@ -319,48 +321,51 @@ uv run main.py -i example/dump.sql -i example/orders.csv
 uv run main.py -i wynik.pkl
 ```
 
-### Wykonywanie komend z pliku (`-f`)
+### Tłumaczenie bez wykonania (`-f` / stdin)
+
+Domyślnie program tylko tłumaczy SQL na kod Pandas — nie potrzeba danych:
 
 ```bash
-# podstawowe zapytania z dumpa SQL
-uv run main.py -i example/dump.sql -f example/queries.sql
+# z pliku
+uv run main.py -f example/queries.sql
 
-# dwie tabele, komendy z pliku
-uv run main.py -i example/dump.sql -i example/orders.csv -f example/queries.sql
+# ze stdin
+cat example/queries.sql | uv run main.py
 ```
 
-Plik z komendami - jedno zapytanie SQL per linia, linie zaczynające się od `--` są pomijane.
+Zapytania oddzielone są średnikami, cały plik parsowany jako jedno drzewo.
 
-Można też przekazać komendy przez stdin:
+### Wykonywanie (`-x`)
 
-```bash
-cat example/queries.sql | uv run main.py -i example/dump.sql
-
-# lub operatorem przekierowania
-uv run main.py -i example/dump.sql < example/queries.sql
-```
-
-Przez stdin można też przekazać dump SQL (CREATE TABLE + INSERT INTO):
+Flaga `-x` powoduje wykonanie wygenerowanego kodu. Wymaga załadowanych danych przez `-i`:
 
 ```bash
-cat example/dump.sql | uv run main.py
+# tłumacz i wykonaj
+uv run main.py -i example/csv/products.csv -f example/queries.sql -x
+
+# ze stdin
+cat example/queries.sql | uv run main.py -i example/csv/products.csv -x
 ```
 
 ### Eksport danych (`-o`)
 
+Eksportuje tabele po wykonaniu. Wymaga `-x`:
+
 ```bash
 # eksport do CSV - jedna tabela: wynik.csv, wiele tabel: wynik_products.csv, wynik_orders.csv
-uv run main.py -i example/dump.sql -i example/orders.csv -o wynik.csv
+uv run main.py -i example/csv/products.csv -x -o wynik.csv
 
 # eksport do pickle - wszystkie tabele w jednym pliku jako slownik
-uv run main.py -i example/dump.sql -i example/orders.csv -o wynik.pkl
+uv run main.py -i example/csv/products.csv -i example/csv/orders.csv -x -o wynik.pkl
 ```
 
-Po eksporcie program kończy działanie bez otwierania REPL.
+### REPL (`-r`)
 
-### REPL
+Interaktywna powłoka — zawsze wykonuje zapytania i wyświetla wyniki:
 
-Po wczytaniu danych (bez flagi `-o`) program uruchamia interaktywny REPL. Wpisz zapytanie SQL, program wypisze wynik jako tabelę oraz wygenerowany kod Pandas.
+```bash
+uv run main.py -i example/csv/products.csv -r
+```
 
 Komendy REPL:
 - `q` - wyjście

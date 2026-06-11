@@ -8,4 +8,7 @@ uv run main.py \
   -i example/csv/products.csv \
   -i example/csv/staffs.csv \
   -i example/csv/stocks.csv \
-  -i example/csv/stores.csv
+  -i example/csv/stores.csv \
+  -x \
+  -r
+
